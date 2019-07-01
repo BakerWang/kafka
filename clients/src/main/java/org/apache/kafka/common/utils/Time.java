@@ -1,10 +1,10 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 package org.apache.kafka.common.utils;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * An interface abstracting the clock to use in unit testing classes that make use of clock time.
@@ -33,7 +37,9 @@ public interface Time {
     /**
      * Returns the value returned by `nanoseconds` converted into milliseconds.
      */
-    long hiResClockMs();
+    default long hiResClockMs() {
+        return TimeUnit.NANOSECONDS.toMillis(nanoseconds());
+    }
 
     /**
      * Returns the current value of the running JVM's high-resolution time source, in nanoseconds.
@@ -52,5 +58,32 @@ public interface Time {
      * Sleep for the given number of milliseconds
      */
     void sleep(long ms);
+
+    /**
+     * Wait for a condition using the monitor of a given object. This avoids the implicit
+     * dependence on system time when calling {@link Object#wait()}.
+     *
+     * @param obj The object that will be waited with {@link Object#wait()}. Note that it is the responsibility
+     *      of the caller to call notify on this object when the condition is satisfied.
+     * @param condition The condition we are awaiting
+     * @param timeoutMs How long to wait in milliseconds
+     *
+     * @throws org.apache.kafka.common.errors.TimeoutException if the timeout expires before the condition is satisfied
+     */
+    void waitObject(Object obj, Supplier<Boolean> condition, long timeoutMs) throws InterruptedException;
+
+    /**
+     * Get a timer which is bound to this time instance and expires after the given timeout
+     */
+    default Timer timer(long timeoutMs) {
+        return new Timer(this, timeoutMs);
+    }
+
+    /**
+     * Get a timer which is bound to this time instance and expires after the given timeout
+     */
+    default Timer timer(Duration timeout) {
+        return timer(timeout.toMillis());
+    }
 
 }

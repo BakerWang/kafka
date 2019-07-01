@@ -1,24 +1,24 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- **/
-
+ */
 package org.apache.kafka.connect.runtime;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.util.ConnectorTaskId;
+import org.apache.kafka.connect.util.LoggingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +80,9 @@ class SourceTaskOffsetCommitter {
         ScheduledFuture<?> commitFuture = commitExecutorService.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                commit(workerTask);
+                try (LoggingContext loggingContext = LoggingContext.forOffsets(id)) {
+                    commit(workerTask);
+                }
             }
         }, commitIntervalMs, commitIntervalMs, TimeUnit.MILLISECONDS);
         committers.put(id, commitFuture);
@@ -91,7 +93,7 @@ class SourceTaskOffsetCommitter {
         if (task == null)
             return;
 
-        try {
+        try (LoggingContext loggingContext = LoggingContext.forTask(id)) {
             task.cancel(false);
             if (!task.isDone())
                 task.get();
@@ -104,17 +106,17 @@ class SourceTaskOffsetCommitter {
     }
 
     private void commit(WorkerSourceTask workerTask) {
-        log.debug("Committing offsets for {}", workerTask);
+        log.debug("{} Committing offsets", workerTask);
         try {
             if (workerTask.commitOffsets()) {
                 return;
             }
-            log.error("Failed to commit offsets for {}", workerTask);
+            log.error("{} Failed to commit offsets", workerTask);
         } catch (Throwable t) {
             // We're very careful about exceptions here since any uncaught exceptions in the commit
             // thread would cause the fixed interval schedule on the ExecutorService to stop running
             // for that task
-            log.error("Unhandled exception when committing {}: ", workerTask, t);
+            log.error("{} Unhandled exception when committing: ", workerTask, t);
         }
     }
 }

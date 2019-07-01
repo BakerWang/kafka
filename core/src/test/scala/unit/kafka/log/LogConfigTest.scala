@@ -28,11 +28,11 @@ import org.scalatest.Assertions._
 
 class LogConfigTest {
 
-  /** 
-   * This test verifies that KafkaConfig object initialization does not depend on 
-   * LogConfig initialization. Bad things happen due to static initialization 
-   * order dependencies. For example, LogConfig.configDef ends up adding null 
-   * values in serverDefaultConfigNames. This test ensures that the mapping of 
+  /**
+   * This test verifies that KafkaConfig object initialization does not depend on
+   * LogConfig initialization. Bad things happen due to static initialization
+   * order dependencies. For example, LogConfig.configDef ends up adding null
+   * values in serverDefaultConfigNames. This test ensures that the mapping of
    * keys from LogConfig to KafkaConfig are not missing values.
    */
   @Test
@@ -73,12 +73,22 @@ class LogConfigTest {
       case LogConfig.UncleanLeaderElectionEnableProp => assertPropertyInvalid(name, "not a boolean")
       case LogConfig.RetentionBytesProp => assertPropertyInvalid(name, "not_a_number")
       case LogConfig.RetentionMsProp => assertPropertyInvalid(name, "not_a_number" )
-      case LogConfig.CleanupPolicyProp => assertPropertyInvalid(name, "true", "foobar");
+      case LogConfig.CleanupPolicyProp => assertPropertyInvalid(name, "true", "foobar")
       case LogConfig.MinCleanableDirtyRatioProp => assertPropertyInvalid(name, "not_a_number", "-0.1", "1.2")
       case LogConfig.MinInSyncReplicasProp => assertPropertyInvalid(name, "not_a_number", "0", "-1")
       case LogConfig.MessageFormatVersionProp => assertPropertyInvalid(name, "")
       case _ => assertPropertyInvalid(name, "not_a_number", "-1")
     })
+  }
+
+  @Test
+  def testInvalidCompactionLagConfig(): Unit = {
+    val props = new Properties
+    props.setProperty(LogConfig.MaxCompactionLagMsProp, "100")
+    props.setProperty(LogConfig.MinCompactionLagMsProp, "200")
+    intercept[Exception] {
+      LogConfig.validate(props)
+    }
   }
 
   @Test
@@ -109,16 +119,6 @@ class LogConfigTest {
       true
     } catch {
       case _: ConfigException => false
-    }
-  }
-  def testValueValidator() {
-    val p = new Properties()
-    p.setProperty(LogConfig.SegmentBytesProp, "100")
-    p.setProperty(LogConfig.RetentionBytesProp, "100")
-    LogConfig.validate(p)
-    p.setProperty(LogConfig.RetentionBytesProp, "90")
-    val except = intercept[IllegalArgumentException] {
-      LogConfig.validate(p)
     }
   }
 

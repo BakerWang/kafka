@@ -24,7 +24,7 @@ from tempfile import mkstemp
 from ducktape.services.service import Service
 
 from kafkatest.directory_layout.kafka_path import KafkaPathResolverMixin, CORE_LIBS_JAR_NAME, CORE_DEPENDANT_TEST_LIBS_JAR_NAME
-from kafkatest.version import TRUNK
+from kafkatest.version import DEV_BRANCH
 
 
 class MiniKdc(KafkaPathResolverMixin, Service):
@@ -103,8 +103,8 @@ class MiniKdc(KafkaPathResolverMixin, Service):
         principals = 'client ' + kafka_principals + ' ' + self.extra_principals
         self.logger.info("Starting MiniKdc with principals " + principals)
 
-        core_libs_jar = self.path.jar(CORE_LIBS_JAR_NAME, TRUNK)
-        core_dependant_test_libs_jar = self.path.jar(CORE_DEPENDANT_TEST_LIBS_JAR_NAME, TRUNK)
+        core_libs_jar = self.path.jar(CORE_LIBS_JAR_NAME, DEV_BRANCH)
+        core_dependant_test_libs_jar = self.path.jar(CORE_DEPENDANT_TEST_LIBS_JAR_NAME, DEV_BRANCH)
 
         cmd = "for file in %s; do CLASSPATH=$CLASSPATH:$file; done;" % core_libs_jar
         cmd += " for file in %s; do CLASSPATH=$CLASSPATH:$file; done;" % core_dependant_test_libs_jar
@@ -123,10 +123,10 @@ class MiniKdc(KafkaPathResolverMixin, Service):
 
     def stop_node(self, node):
         self.logger.info("Stopping %s on %s" % (type(self).__name__, node.account.hostname))
-        node.account.kill_process("apacheds", allow_fail=False)
+        node.account.kill_java_processes("MiniKdc", clean_shutdown=True, allow_fail=False)
 
     def clean_node(self, node):
-        node.account.kill_process("apacheds", clean_shutdown=False, allow_fail=False)
+        node.account.kill_java_processes("MiniKdc", clean_shutdown=False, allow_fail=True)
         node.account.ssh("rm -rf " + MiniKdc.WORK_DIR, allow_fail=False)
         if os.path.exists(MiniKdc.LOCAL_KEYTAB_FILE):
             os.remove(MiniKdc.LOCAL_KEYTAB_FILE)
